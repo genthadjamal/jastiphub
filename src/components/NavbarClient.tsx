@@ -3,17 +3,19 @@
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { logoutUser } from '@/app/actions/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function NavbarClient() {
     const { totalItems } = useCart();
     const router = useRouter();
-    const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+    const pathname = usePathname();
+    const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
+
+    // Hide entire navbar on admin pages (admin has its own sidebar)
+    const isAdminPage = pathname.startsWith('/admin');
 
     useEffect(() => {
-        // Read session from cookie via fetch to a lightweight endpoint
-        // For simplicity, we read the cookie on the client side
         const getCookie = (name: string) => {
             const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
             return match ? decodeURIComponent(match[2]) : null;
@@ -30,6 +32,9 @@ export default function NavbarClient() {
         router.push('/login');
         router.refresh();
     };
+
+    // Don't render navbar on admin pages at all
+    if (isAdminPage) return null;
 
     return (
         <nav className="navbar">
@@ -67,17 +72,40 @@ export default function NavbarClient() {
 
                     {user ? (
                         <>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                👤 {user.name}
-                            </span>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.4rem 0.8rem',
+                                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                border: '1px solid rgba(139, 92, 246, 0.3)',
+                                borderRadius: 'var(--radius-md)',
+                            }}>
+                                <span style={{ fontSize: '1rem' }}>👤</span>
+                                <div style={{ lineHeight: 1.2 }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fff', display: 'block' }}>{user.name}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)' }}>
+                                        {user.role === 'ADMIN' ? '🔐 Admin' : '🛍️ Customer'}
+                                    </span>
+                                </div>
+                            </div>
                             {user.role === 'ADMIN' && (
                                 <Link href="/admin" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>
-                                    Admin
+                                    Admin Panel
                                 </Link>
                             )}
                             <button
                                 onClick={handleLogout}
-                                style={{ background: 'none', border: '1px solid var(--border-light)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.4rem 1rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem' }}
+                                style={{
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    color: 'var(--error)',
+                                    cursor: 'pointer',
+                                    padding: '0.4rem 1rem',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 500,
+                                }}
                             >
                                 Logout
                             </button>
@@ -92,3 +120,4 @@ export default function NavbarClient() {
         </nav>
     );
 }
+
