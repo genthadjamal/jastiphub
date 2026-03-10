@@ -2,9 +2,34 @@
 
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { logoutUser } from '@/app/actions/auth';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function NavbarClient() {
     const { totalItems } = useCart();
+    const router = useRouter();
+    const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+
+    useEffect(() => {
+        // Read session from cookie via fetch to a lightweight endpoint
+        // For simplicity, we read the cookie on the client side
+        const getCookie = (name: string) => {
+            const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            return match ? decodeURIComponent(match[2]) : null;
+        };
+        const raw = getCookie('session-user');
+        if (raw) {
+            try { setUser(JSON.parse(raw)); } catch { setUser(null); }
+        }
+    }, []);
+
+    const handleLogout = async () => {
+        await logoutUser();
+        setUser(null);
+        router.push('/login');
+        router.refresh();
+    };
 
     return (
         <nav className="navbar">
@@ -39,9 +64,29 @@ export default function NavbarClient() {
                             </span>
                         )}
                     </Link>
-                    <Link href="/admin/login" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>
-                        Admin
-                    </Link>
+
+                    {user ? (
+                        <>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                👤 {user.name}
+                            </span>
+                            {user.role === 'ADMIN' && (
+                                <Link href="/admin" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>
+                                    Admin
+                                </Link>
+                            )}
+                            <button
+                                onClick={handleLogout}
+                                style={{ background: 'none', border: '1px solid var(--border-light)', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.4rem 1rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem' }}
+                            >
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <Link href="/login" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.9rem' }}>
+                            Login
+                        </Link>
+                    )}
                 </div>
             </div>
         </nav>
