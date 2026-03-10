@@ -1,11 +1,19 @@
 import CheckoutClient from './CheckoutClient';
+import CartCheckoutClient from './CartCheckoutClient';
 import { getProductById } from '@/app/actions/product';
 import Link from 'next/link';
 
-export default async function Checkout({ searchParams }: { searchParams: Promise<{ productId?: string }> }) {
+export default async function Checkout({ searchParams }: { searchParams: Promise<{ productId?: string; fromCart?: string }> }) {
   const params = await searchParams;
   const productId = params.productId;
-  
+  const fromCart = params.fromCart === 'true';
+
+  // Cart-based checkout
+  if (fromCart) {
+    return <CartCheckoutClient />;
+  }
+
+  // Single product checkout (Buy Now)
   if (!productId) {
     return (
       <div className="container" style={{ textAlign: 'center', marginTop: '5rem', paddingBottom: '5rem' }}>
@@ -38,3 +46,4 @@ export default async function Checkout({ searchParams }: { searchParams: Promise
 
   return <CheckoutClient product={product} />;
 }
+

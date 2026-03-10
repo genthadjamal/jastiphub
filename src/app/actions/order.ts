@@ -9,7 +9,7 @@ export async function createOrder(formData: FormData) {
     const customerEmail = formData.get('customerEmail') as string;
     const customerAddress = formData.get('customerAddress') as string;
     const productId = formData.get('productId') as string;
-    
+
     // In a real app we'd upload the file to Supabase Storage and get the URL
     // For now we'll just mock the receipt URL
     const paymentReceiptUrl = 'https://example.com/mock-receipt.jpg';
@@ -66,11 +66,68 @@ export async function createOrder(formData: FormData) {
     revalidatePath('/admin/orders');
     revalidatePath('/admin/products');
     revalidatePath(`/product/${product.id}`);
-    
+
     return { success: true, data: order };
   } catch (error) {
     console.error('Error creating order:', error);
     return { success: false, error: 'Failed to process order' };
+  }
+}
+
+export async function createOrderFromCart(formData: FormData) {
+  try {
+    const customerName = formData.get('customerName') as string;
+    const customerEmail = formData.get('customerEmail') as string;
+    const customerAddress = formData.get('customerAddress') as string;
+    const cartItemsJson = formData.get('cartItems') as string;
+    const cartItems = JSON.parse(cartItemsJson) as Array<{ id: string; quantity: number; price: number }>;
+
+    const paymentReceiptUrl = 'https://example.com/mock-receipt.jpg';
+    const shippingCost = 50000;
+
+    // Calculate total
+    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const totalAmount = subtotal + shippingCost;
+
+    // Create Order with multiple OrderItems in a transaction
+    const order = await prisma.$transaction(async (tx: any) => {
+      const newOrder = await tx.order.create({
+        data: {
+          customerName,
+          customerEmail,
+          customerAddress,
+          totalAmount,
+          paymentReceiptUrl,
+          status: 'Pending',
+          items: {
+            create: cartItems.map(item => ({
+              productId: item.id,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          }
+        }
+      });
+
+      // Decrement stock for each product
+      for (const item of cartItems) {
+        await tx.product.update({
+          where: { id: item.id },
+          data: { stock: { decrement: item.quantity } }
+        });
+      }
+
+      return newOrder;
+    });
+
+    revalidatePath('/admin/orders');
+    revalidatePath('/admin/products');
+    revalidatePath('/');
+
+    return { success: true, data: order };
+  } catch (error) {
+    console.error('Error creating cart order:', error);
+    return { success: false, error: 'Failed to process cart order' };
   }
 }
 
@@ -104,9 +161,9 @@ export async function updateOrderStatus(id: string, status: string, trackingResi
       where: { id },
       data
     });
-    
+
     revalidatePath('/admin/orders');
-    
+
     return { success: true, data: order };
   } catch (error) {
     console.error(`Error updating order ${id}:`, error);
