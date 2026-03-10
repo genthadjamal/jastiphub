@@ -12,8 +12,8 @@ export default function NavbarClient() {
     const pathname = usePathname();
     const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
 
-    // Hide entire navbar on admin pages (admin has its own sidebar)
-    const isAdminPage = pathname.startsWith('/admin');
+    // Hide entire navbar on admin, login, and register pages
+    const hideNavbar = pathname.startsWith('/admin') || pathname === '/login' || pathname === '/register';
 
     useEffect(() => {
         const getCookie = (name: string) => {
@@ -36,7 +36,7 @@ export default function NavbarClient() {
     };
 
     // Don't render navbar on admin pages at all
-    if (isAdminPage) return null;
+    if (hideNavbar) return null;
 
     return (
         <nav className="navbar">
