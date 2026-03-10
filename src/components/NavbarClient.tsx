@@ -23,8 +23,10 @@ export default function NavbarClient() {
         const raw = getCookie('session-user');
         if (raw) {
             try { setUser(JSON.parse(raw)); } catch { setUser(null); }
+        } else {
+            setUser(null);
         }
-    }, []);
+    }, [pathname]);
 
     const handleLogout = async () => {
         await logoutUser();
